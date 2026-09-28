@@ -212,7 +212,7 @@ Downloads files from URLs or Feishu messages to the local filesystem. Supports:
 
 ## EventTrigger Tool (`tools/event_trigger.go`)
 
-Manages webhook event subscriptions for external service integration. Actions: `add`, `list`, `remove`, `enable`, `disable`. Returns webhook URLs that external services can POST to. Supports Go template message rendering with event data.
+Manages webhook event subscriptions for external service integration. Actions: `add`, `list`, `remove`, `enable`, `disable`. Returns webhook URLs that external services can POST to. Supports Go template message rendering with event data. Generic HMAC callers may add `X-Webhook-Timestamp` (Unix seconds) and `X-Webhook-Nonce`; in that mode the signature covers `v1\n<timestamp>\n<nonce>\n<body>`, requests outside a five-minute window are rejected, and accepted request IDs are persisted for replay-safe idempotency.
 
 ## Other Tools
 

@@ -128,7 +128,7 @@ END;
 CREATE TABLE schema_version (
     version INTEGER PRIMARY KEY
 );
-INSERT INTO schema_version (version) VALUES (70);
+INSERT INTO schema_version (version) VALUES (71);
 
 -- Token usage statistics (v19 cumulative + v25 daily). Fresh databases skip
 -- historical migrations, so both tables must be part of this schema snapshot.
@@ -274,6 +274,17 @@ CREATE TABLE event_triggers (
 );
 CREATE INDEX idx_event_triggers_sender ON event_triggers(sender_id);
 CREATE INDEX idx_event_triggers_type ON event_triggers(event_type, enabled);
+
+CREATE TABLE webhook_request_receipts (
+    trigger_id  TEXT NOT NULL,
+    request_id  TEXT NOT NULL,
+    body_digest TEXT NOT NULL,
+    received_at INTEGER NOT NULL,
+    PRIMARY KEY(trigger_id, request_id),
+    FOREIGN KEY(trigger_id) REFERENCES event_triggers(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_webhook_request_receipts_received
+    ON webhook_request_receipts(received_at);
 
 CREATE TABLE user_chats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

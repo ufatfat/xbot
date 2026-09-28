@@ -485,6 +485,33 @@ func (db *DB) migrateSchema(from int) error {
 		}
 	}
 
+	if from < 71 {
+		if err := migrateV70ToV71(db); err != nil {
+			return fmt.Errorf("migrate to v71: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func migrateV70ToV71(db *DB) error {
+	_, err := db.Conn().Exec(`
+		CREATE TABLE IF NOT EXISTS webhook_request_receipts (
+			trigger_id TEXT NOT NULL,
+			request_id TEXT NOT NULL,
+			body_digest TEXT NOT NULL,
+			received_at INTEGER NOT NULL,
+			PRIMARY KEY(trigger_id, request_id),
+			FOREIGN KEY(trigger_id) REFERENCES event_triggers(id) ON DELETE CASCADE
+		);
+		CREATE INDEX IF NOT EXISTS idx_webhook_request_receipts_received
+			ON webhook_request_receipts(received_at);
+		UPDATE schema_version SET version = 71;
+	`)
+	if err != nil {
+		return fmt.Errorf("migrate v70->v71 webhook receipts: %w", err)
+	}
+	log.Info("Database migrated to v71 (signed webhook replay receipts)")
 	return nil
 }
 

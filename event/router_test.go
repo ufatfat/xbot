@@ -4,6 +4,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -13,10 +15,11 @@ import (
 type memTriggerStore struct {
 	mu       sync.RWMutex
 	triggers map[string]*Trigger
+	receipts map[string]string
 }
 
 func newMemTriggerStore() *memTriggerStore {
-	return &memTriggerStore{triggers: make(map[string]*Trigger)}
+	return &memTriggerStore{triggers: make(map[string]*Trigger), receipts: make(map[string]string)}
 }
 
 func (s *memTriggerStore) AddTrigger(t *Trigger) error {
@@ -87,6 +90,22 @@ func (s *memTriggerStore) RecordFire(id string, at time.Time) error {
 		t.FireCount++
 	}
 	return nil
+}
+
+func (s *memTriggerStore) ClaimWebhookRequest(
+	triggerID, requestID, bodyDigest string, _ time.Time,
+) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key := triggerID + "\x00" + requestID
+	if digest, ok := s.receipts[key]; ok {
+		if digest != bodyDigest {
+			return false, fmt.Errorf("request id reused")
+		}
+		return true, nil
+	}
+	s.receipts[key] = bodyDigest
+	return false, nil
 }
 
 func TestRouter_DispatchByID(t *testing.T) {
@@ -278,6 +297,46 @@ func TestRouter_Dispatch_SignatureVerification(t *testing.T) {
 	}
 	if injected != 1 {
 		t.Error("should not have injected with bad signature")
+	}
+}
+
+func TestRouter_SignedWebhookRejectsReplayAndExpiredTimestamp(t *testing.T) {
+	store := newMemTriggerStore()
+	router := NewRouter(store)
+	injected := 0
+	router.SetInjectFunc(func(Message) { injected++ })
+	const secret = "monitoring-webhook-secret"
+	store.AddTrigger(&Trigger{
+		ID: "trg_replay", EventType: "webhook", Channel: "web", ChatID: "c",
+		SenderID: "u", MessageTpl: "signed", Secret: secret, Enabled: true,
+	})
+	body := []byte(`{"alert":"test"}`)
+	now := time.Now().UTC()
+	timestamp := strconv.FormatInt(now.Unix(), 10)
+	nonce := "mxa_1234567890abcdef"
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte("v1\n" + timestamp + "\n" + nonce + "\n"))
+	mac.Write(body)
+	headers := map[string]string{
+		"x-webhook-timestamp": timestamp,
+		"x-webhook-nonce":     nonce,
+		"x-webhook-signature": hex.EncodeToString(mac.Sum(nil)),
+	}
+	evt := Event{Type: "webhook", Headers: headers, RawBody: body, Timestamp: now}
+	first, err := router.DispatchByID("trg_replay", evt)
+	if err != nil || !first.OK || first.Duplicate || injected != 1 {
+		t.Fatalf("first dispatch = %+v err=%v injected=%d", first, err, injected)
+	}
+	second, err := router.DispatchByID("trg_replay", evt)
+	if err != nil || !second.OK || !second.Duplicate || injected != 1 {
+		t.Fatalf("duplicate dispatch = %+v err=%v injected=%d", second, err, injected)
+	}
+
+	expired := evt
+	expired.Timestamp = now.Add(6 * time.Minute)
+	result, err := router.DispatchByID("trg_replay", expired)
+	if err != nil || result.OK || injected != 1 {
+		t.Fatalf("expired dispatch = %+v err=%v injected=%d", result, err, injected)
 	}
 }
 
