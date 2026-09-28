@@ -71,6 +71,45 @@ func TestStdioPluginProcess_GracefulStop(t *testing.T) {
 	}
 }
 
+func TestStdioPlugin_AgentStopForwardsContent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Python shebang test is not portable to Windows")
+	}
+	dir := t.TempDir()
+	script := filepath.Join(dir, "plugin.py")
+	body := `#!/usr/bin/env python3
+import sys, json
+for line in sys.stdin:
+    req = json.loads(line)
+    if req.get("method") == "hook":
+        content = req.get("params", {}).get("content", "")
+        print(json.dumps({"hook_result":{"decision":"allow","message":content}}), flush=True)
+    elif req.get("method") == "deactivate":
+        sys.exit(0)
+`
+	if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
+	proc, err := startPluginProcess(script, "", nil, dir)
+	if err != nil {
+		t.Fatalf("start process: %v", err)
+	}
+	go proc.readLoop()
+	t.Cleanup(proc.Stop)
+
+	p := &stdioPlugin{process: proc}
+	handler := p.makeRemoteHookHandler(string(HookAgentStop), "")
+	result, err := handler(context.Background(), &HookPayload{
+		Event: HookAgentStop, Content: `{"status":"completed"}`,
+	})
+	if err != nil {
+		t.Fatalf("hook call: %v", err)
+	}
+	if result.Message != `{"status":"completed"}` {
+		t.Fatalf("forwarded content = %q", result.Message)
+	}
+}
+
 func TestStdioPluginProcess_StopForcesKillOnTimeout(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("force-kill grace period relies on Unix signal semantics + Python shebang script; not portable to Windows")

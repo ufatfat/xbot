@@ -595,7 +595,7 @@ func generateResponse(ctx context.Context, client llm.LLM, model string, message
 // 主 Agent 和 SubAgent 使用同一个 Run()，差异通过 RunConfig 注入：
 //   - 主 Agent: ToolExecutor=buildToolExecutor, ProgressNotifier=sendMessage, ContextManager=enabled, ...
 //   - SubAgent: ToolExecutor=simpleExecutor, ProgressNotifier=nil, ContextManager=independent_phase1, ...
-func Run(ctx context.Context, cfg RunConfig) *RunOutput {
+func Run(ctx context.Context, cfg RunConfig) (out *RunOutput) {
 	s := newRunState(cfg)
 	// Mark the run as done on EVERY return path — background-subagent progress
 	// callbacks outlive the Run and check this flag to stop broadcasting into
@@ -659,11 +659,16 @@ func Run(ctx context.Context, cfg RunConfig) *RunOutput {
 	// Emit AgentStop event on exit (notification, non-blocking)
 	if s.cfg.HookManager != nil {
 		defer func() {
+			content := ""
+			if out != nil {
+				content = out.Content
+			}
 			s.cfg.HookManager.Emit(ctx, &hooks.AgentStopEvent{
 				BasePayload: hooks.BasePayload{
 					SessionID: s.cfg.ChatID, Channel: s.cfg.Channel,
 					SenderID: s.cfg.OriginUserID, ChatID: s.cfg.ChatID,
 				},
+				Content: content,
 			})
 		}()
 	}

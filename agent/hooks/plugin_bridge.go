@@ -66,6 +66,9 @@ func PluginBridgeCallback(bridge *plugin.PluginHookBridge) *CallbackHook {
 				if ms, ok := p["tool_elapsed_ms"].(int64); ok {
 					payload.ToolElapsedMs = ms
 				}
+				if content, ok := p["content"].(string); ok {
+					payload.Content = content
+				}
 			}
 
 			// Extract session context (model, tokens) from context.

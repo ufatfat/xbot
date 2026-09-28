@@ -107,6 +107,38 @@ func (s *TriggerService) RecordFire(id string, at time.Time) error {
 	return nil
 }
 
+func (s *TriggerService) ClaimWebhookRequest(
+	triggerID, requestID, bodyDigest string, receivedAt time.Time,
+) (bool, error) {
+	conn := s.db.Conn()
+	cutoff := receivedAt.Add(-24 * time.Hour).Unix()
+	if _, err := conn.Exec(`DELETE FROM webhook_request_receipts WHERE received_at < ?`, cutoff); err != nil {
+		return false, fmt.Errorf("expire webhook receipts: %w", err)
+	}
+	result, err := conn.Exec(`INSERT OR IGNORE INTO webhook_request_receipts
+		(trigger_id,request_id,body_digest,received_at) VALUES(?,?,?,?)`,
+		triggerID, requestID, bodyDigest, receivedAt.Unix())
+	if err != nil {
+		return false, fmt.Errorf("claim webhook request: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("read webhook claim result: %w", err)
+	}
+	if rows == 1 {
+		return false, nil
+	}
+	var existingDigest string
+	if err := conn.QueryRow(`SELECT body_digest FROM webhook_request_receipts
+		WHERE trigger_id=? AND request_id=?`, triggerID, requestID).Scan(&existingDigest); err != nil {
+		return false, fmt.Errorf("read webhook receipt: %w", err)
+	}
+	if existingDigest != bodyDigest {
+		return false, fmt.Errorf("webhook request id reused with different body")
+	}
+	return true, nil
+}
+
 // scanTrigger scans a single trigger row.
 func scanTrigger(row *sql.Row) (*event.Trigger, error) {
 	t := &event.Trigger{}

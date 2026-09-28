@@ -735,6 +735,9 @@ func (p *scriptPlugin) runScript(workDir, widgetID string) (string, error) {
 		if hp.ToolInput != "" {
 			env = append(env, "XBOT_TOOL_INPUT="+hp.ToolInput)
 		}
+		if hp.Content != "" {
+			env = append(env, "XBOT_HOOK_CONTENT="+hp.Content)
+		}
 		// Session context from Extra — available on all hook events
 		if hp.Extra != nil {
 			if model, ok := hp.Extra["model"].(string); ok && model != "" {

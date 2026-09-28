@@ -17,7 +17,7 @@ type HookEvent string
 | `HookPostToolUse` | `"PostToolUse"` | After a tool execution succeeds. |
 | `HookPostToolUseError` | `"PostToolUseFailure"` | When a tool execution fails. |
 | `HookUserPromptSubmit` | `"UserPromptSubmit"` | When the user submits a prompt. |
-| `HookAgentStop` | `"AgentStop"` | When the agent loop terminates. |
+| `HookAgentStop` | `"AgentStop"` | When the agent loop terminates; the payload includes final assistant `content`. |
 | `HookSessionStart` | `"SessionStart"` | At the beginning of a new session. |
 | `HookSessionEnd` | `"SessionEnd"` | When a session concludes. |
 | `HookSubAgentStart` | `"SubAgentStart"` | Before a sub-agent is launched. |

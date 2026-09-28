@@ -42,7 +42,7 @@ agent/hooks/
 | `PermissionDenied` | Permission denied | No | — |
 | `SubAgentStart` | SubAgent created | No | — |
 | `SubAgentStop` | SubAgent completed | **Yes** | deny blocks result |
-| `AgentStop` | Agent response complete | **Yes** | deny blocks reply |
+| `AgentStop` | Agent response complete; payload includes final `content` | **Yes** | deny blocks reply |
 | `AgentError` | LLM API call failed | No | — |
 | `PreCompact` | Before context compression | **Yes** | deny blocks compression |
 | `PostCompact` | After compression | No | — |

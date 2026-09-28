@@ -122,6 +122,32 @@ func TestPluginBridgeCallback_PostToolUse(t *testing.T) {
 	}
 }
 
+func TestPluginBridgeCallback_AgentStopContent(t *testing.T) {
+	bridge := plugin.NewPluginHookBridge()
+	var capturedPayload *plugin.HookPayload
+	bridge.Register("callback-plugin", plugin.HookAgentStop, "",
+		func(_ context.Context, payload *plugin.HookPayload) (*plugin.HookResult, error) {
+			capturedPayload = payload
+			return &plugin.HookResult{Decision: plugin.DecisionAllow}, nil
+		},
+	)
+
+	cb := PluginBridgeCallback(bridge)
+	_, err := cb.Fn(context.Background(), &AgentStopEvent{
+		BasePayload: BasePayload{SessionID: "session-1", Channel: "web", ChatID: "chat-1"},
+		Content:     `{"alert_id":"al_1","status":"completed"}`,
+	})
+	if err != nil {
+		t.Fatalf("callback returned error: %v", err)
+	}
+	if capturedPayload == nil {
+		t.Fatal("expected payload to be captured")
+	}
+	if capturedPayload.Content != `{"alert_id":"al_1","status":"completed"}` {
+		t.Fatalf("AgentStop content = %q", capturedPayload.Content)
+	}
+}
+
 // TestPluginBridgeCallback_DenyDecision verifies that a deny decision from a
 // plugin hook is correctly propagated through the bridge callback.
 func TestPluginBridgeCallback_DenyDecision(t *testing.T) {

@@ -101,6 +101,7 @@ Widget 由三种触发方式刷新：
 | `XBOT_WIDGET_ID` | 正在渲染的 widget ID | Widget 渲染时 |
 | `XBOT_PLUGIN_CONFIG` | 插件配置（JSON） | 始终（若存在配置） |
 | `XBOT_HOOK_EVENT` | Hook 事件名 | Hook 触发时 |
+| `XBOT_HOOK_CONTENT` | Agent 最终回复正文 | `AgentStop` Hook 触发时 |
 | `XBOT_TOOL_NAME` | 触发 hook 的工具名 | 工具 hook |
 | `XBOT_TOOL_OUTPUT` | 工具输出（截断到 8KB） | PostToolUse hook |
 | `XBOT_TOOL_INPUT` | 工具输入 | 工具 hook |

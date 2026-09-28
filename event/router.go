@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -34,11 +35,19 @@ type TriggerStore interface {
 	RecordFire(id string, at time.Time) error
 }
 
+// WebhookReplayStore persists signed webhook request IDs. Implementations must
+// return duplicate=true only when the same request ID and body digest were
+// already accepted; reusing an ID for a different body is an error.
+type WebhookReplayStore interface {
+	ClaimWebhookRequest(triggerID, requestID, bodyDigest string, receivedAt time.Time) (duplicate bool, err error)
+}
+
 // DispatchResult records the outcome of dispatching an event to one trigger.
 type DispatchResult struct {
 	TriggerID string
 	OK        bool
 	Error     string
+	Duplicate bool
 }
 
 // Router matches incoming events to registered triggers and injects messages.
@@ -68,6 +77,22 @@ func (r *Router) dispatchOne(t *Trigger, evt Event) DispatchResult {
 			TriggerID: t.ID,
 			OK:        false,
 			Error:     "signature verification failed",
+		}
+	}
+	if requestID := evt.Headers["x-webhook-nonce"]; requestID != "" {
+		replayStore, ok := r.store.(WebhookReplayStore)
+		if !ok {
+			return DispatchResult{TriggerID: t.ID, OK: false, Error: "webhook replay protection unavailable"}
+		}
+		digestBytes := sha256.Sum256(evt.RawBody)
+		duplicate, err := replayStore.ClaimWebhookRequest(
+			t.ID, requestID, hex.EncodeToString(digestBytes[:]), evt.Timestamp,
+		)
+		if err != nil {
+			return DispatchResult{TriggerID: t.ID, OK: false, Error: "webhook replay check failed"}
+		}
+		if duplicate {
+			return DispatchResult{TriggerID: t.ID, OK: true, Duplicate: true}
 		}
 	}
 
@@ -197,6 +222,19 @@ func verifySignature(evt Event, secret string) bool {
 	}
 
 	mac := hmac.New(sha256.New, []byte(secret))
+	timestamp := strings.TrimSpace(evt.Headers["x-webhook-timestamp"])
+	nonce := strings.TrimSpace(evt.Headers["x-webhook-nonce"])
+	if timestamp != "" || nonce != "" {
+		unixSeconds, err := strconv.ParseInt(timestamp, 10, 64)
+		if err != nil || !validWebhookNonce(nonce) {
+			return false
+		}
+		requestTime := time.Unix(unixSeconds, 0)
+		if requestTime.Before(evt.Timestamp.Add(-5*time.Minute)) || requestTime.After(evt.Timestamp.Add(5*time.Minute)) {
+			return false
+		}
+		mac.Write([]byte("v1\n" + timestamp + "\n" + nonce + "\n"))
+	}
 	mac.Write(evt.RawBody)
 	expected := hex.EncodeToString(mac.Sum(nil))
 
@@ -218,4 +256,17 @@ func verifySignature(evt Event, secret string) bool {
 	}
 
 	return false
+}
+
+func validWebhookNonce(value string) bool {
+	if len(value) < 16 || len(value) > 128 {
+		return false
+	}
+	for _, char := range value {
+		if char != '_' && char != '-' && (char < 'a' || char > 'z') &&
+			(char < 'A' || char > 'Z') && (char < '0' || char > '9') {
+			return false
+		}
+	}
+	return true
 }
