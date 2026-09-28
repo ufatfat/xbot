@@ -327,7 +327,20 @@ func TestRouter_SignedWebhookRejectsReplayAndExpiredTimestamp(t *testing.T) {
 	if err != nil || !first.OK || first.Duplicate || injected != 1 {
 		t.Fatalf("first dispatch = %+v err=%v injected=%d", first, err, injected)
 	}
-	second, err := router.DispatchByID("trg_replay", evt)
+	retryTime := now.Add(time.Second)
+	retryTimestamp := strconv.FormatInt(retryTime.Unix(), 10)
+	retryMAC := hmac.New(sha256.New, []byte(secret))
+	retryMAC.Write([]byte("v1\n" + retryTimestamp + "\n" + nonce + "\n"))
+	retryMAC.Write(body)
+	retry := Event{
+		Type: "webhook", RawBody: body, Timestamp: retryTime,
+		Headers: map[string]string{
+			"x-webhook-timestamp": retryTimestamp,
+			"x-webhook-nonce":     nonce,
+			"x-webhook-signature": hex.EncodeToString(retryMAC.Sum(nil)),
+		},
+	}
+	second, err := router.DispatchByID("trg_replay", retry)
 	if err != nil || !second.OK || !second.Duplicate || injected != 1 {
 		t.Fatalf("duplicate dispatch = %+v err=%v injected=%d", second, err, injected)
 	}
