@@ -101,6 +101,7 @@ Scripts receive context via environment variables:
 | `XBOT_WIDGET_ID` | Widget ID being rendered | Widget rendering |
 | `XBOT_PLUGIN_CONFIG` | Plugin configuration (JSON) | Always (if config exists) |
 | `XBOT_HOOK_EVENT` | Hook event name | Hook triggers |
+| `XBOT_HOOK_CONTENT` | Final assistant content | `AgentStop` hook triggers |
 | `XBOT_TOOL_NAME` | Tool name that triggered the hook | Tool hooks |
 | `XBOT_TOOL_OUTPUT` | Tool output (truncated to 8KB) | PostToolUse hooks |
 | `XBOT_TOOL_INPUT` | Tool input | Tool hooks |

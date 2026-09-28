@@ -683,6 +683,7 @@ type HookPayload struct {
 	ToolInput     string         `json:"tool_input,omitempty"`
 	ToolOutput    string         `json:"tool_output,omitempty"`     // tool execution result (PostToolUse only)
 	ToolElapsedMs int64          `json:"tool_elapsed_ms,omitempty"` // tool execution duration in ms
+	Content       string         `json:"content,omitempty"`         // final assistant content (AgentStop only)
 	SessionID     string         `json:"session_id,omitempty"`
 	Channel       string         `json:"channel,omitempty"`
 	ChatID        string         `json:"chat_id,omitempty"`

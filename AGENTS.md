@@ -1,5 +1,7 @@
 # xbot
 
+- **`AgentStop` 回调必须携带最终正文**：`agent.Run` 使用命名返回值，在 defer 中把最终 `RunOutput.Content` 写入 `hooks.AgentStopEvent.Content`；插件桥映射为 `HookPayload.Content`，script runtime 通过 `XBOT_HOOK_CONTENT` 暴露。不要从 reasoning、历史消息或工具输出猜最终正文。
+
 > Go AI Agent framework with message bus + plugin architecture. Supports Feishu/Web/CLI channels (QQ / NapCat are plugin-provided), tool calling, pluggable memory, skills, subagents, MCP integration.
 
 ## Quick Reference

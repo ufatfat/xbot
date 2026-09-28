@@ -246,6 +246,7 @@ func (g *stdioPlugin) makeRemoteHookHandler(event, matcher string) HookHandler {
 				"event":     string(payload.Event),
 				"toolName":  payload.ToolName,
 				"toolInput": payload.ToolInput,
+				"content":   payload.Content,
 				"sessionId": payload.SessionID,
 				"channel":   payload.Channel,
 				"chatId":    payload.ChatID,

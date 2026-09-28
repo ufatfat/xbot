@@ -1752,6 +1752,36 @@ func TestRun_WithHookManager_PreAndPost(t *testing.T) {
 	}
 }
 
+func TestRun_AgentStopIncludesFinalContent(t *testing.T) {
+	var stopContent string
+	mgr, _ := hooks.NewManager("", "")
+	mgr.RegisterBuiltin(&hooks.CallbackHook{
+		Name: "capture-agent-stop",
+		Fn: func(_ context.Context, event hooks.Event) (*hooks.Result, error) {
+			if stop, ok := event.(*hooks.AgentStopEvent); ok {
+				stopContent = stop.Content
+			}
+			return &hooks.Result{Decision: "allow"}, nil
+		},
+	})
+
+	out := Run(context.Background(), RunConfig{
+		LLMClient:   &mockLLM{responses: []llm.LLMResponse{{Content: `{"status":"completed"}`}}},
+		Model:       "test",
+		Tools:       newTestRegistry(),
+		Messages:    baseMessages(),
+		AgentID:     "main",
+		HookManager: mgr,
+	})
+
+	if out.Error != nil {
+		t.Fatalf("unexpected error: %v", out.Error)
+	}
+	if stopContent != out.Content {
+		t.Fatalf("AgentStop content = %q, want final output %q", stopContent, out.Content)
+	}
+}
+
 func TestRun_WithHookManager_PreBlocks(t *testing.T) {
 	mgr, _ := hooks.NewManager("", "")
 	mgr.RegisterBuiltin(&hooks.CallbackHook{

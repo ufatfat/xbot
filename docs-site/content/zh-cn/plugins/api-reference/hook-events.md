@@ -17,7 +17,7 @@ type HookEvent string
 | `HookPostToolUse` | `"PostToolUse"` | 工具执行成功之后。 |
 | `HookPostToolUseError` | `"PostToolUseFailure"` | 工具执行失败时。 |
 | `HookUserPromptSubmit` | `"UserPromptSubmit"` | 用户提交提示词时。 |
-| `HookAgentStop` | `"AgentStop"` | agent 循环终止时。 |
+| `HookAgentStop` | `"AgentStop"` | Agent 循环终止时；载荷包含最终回复 `content`。 |
 | `HookSessionStart` | `"SessionStart"` | 新会话开始时。 |
 | `HookSessionEnd` | `"SessionEnd"` | 会话结束时。 |
 | `HookSubAgentStart` | `"SubAgentStart"` | 子代理启动之前。 |

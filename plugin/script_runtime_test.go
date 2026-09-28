@@ -491,13 +491,13 @@ func TestScriptPlugin_EnvInjection(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		scriptPath = filepath.Join(dir, "env.bat")
 		os.WriteFile(scriptPath, []byte(
-			"@echo WORKDIR=%XBOT_WORK_DIR% TOOL=%XBOT_TOOL_NAME% OUTPUT=%XBOT_TOOL_OUTPUT% INPUT=%XBOT_TOOL_INPUT%",
+			"@echo WORKDIR=%XBOT_WORK_DIR% TOOL=%XBOT_TOOL_NAME% OUTPUT=%XBOT_TOOL_OUTPUT% INPUT=%XBOT_TOOL_INPUT% CONTENT=%XBOT_HOOK_CONTENT%",
 		), 0o644)
 		entry = scriptPath
 	} else {
 		scriptPath = filepath.Join(dir, "env.sh")
 		os.WriteFile(scriptPath, []byte(`#!/bin/sh
-echo "WORKDIR=$XBOT_WORK_DIR TOOL=$XBOT_TOOL_NAME OUTPUT=$XBOT_TOOL_OUTPUT INPUT=$XBOT_TOOL_INPUT"
+echo "WORKDIR=$XBOT_WORK_DIR TOOL=$XBOT_TOOL_NAME OUTPUT=$XBOT_TOOL_OUTPUT INPUT=$XBOT_TOOL_INPUT CONTENT=$XBOT_HOOK_CONTENT"
 `), 0o755)
 		entry = "sh " + scriptPath
 	}
@@ -527,6 +527,7 @@ echo "WORKDIR=$XBOT_WORK_DIR TOOL=$XBOT_TOOL_NAME OUTPUT=$XBOT_TOOL_OUTPUT INPUT
 		ToolName:   "Shell",
 		ToolOutput: "test-output-data",
 		ToolInput:  `{"command":"ls"}`,
+		Content:    `{"status":"completed"}`,
 	}
 	sp.lastHookMu.Unlock()
 
@@ -547,6 +548,9 @@ echo "WORKDIR=$XBOT_WORK_DIR TOOL=$XBOT_TOOL_NAME OUTPUT=$XBOT_TOOL_OUTPUT INPUT
 	}
 	if !strings.Contains(output, `INPUT={"command":"ls"}`) {
 		t.Errorf("output = %q, should contain INPUT={\"command\":\"ls\"}", output)
+	}
+	if !strings.Contains(output, `CONTENT={"status":"completed"}`) {
+		t.Errorf("output = %q, should contain AgentStop content", output)
 	}
 }
 

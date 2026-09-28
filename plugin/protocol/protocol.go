@@ -87,6 +87,7 @@ type HookParams struct {
 	Event     string `json:"event"`
 	ToolName  string `json:"toolName,omitempty"`
 	ToolInput string `json:"toolInput,omitempty"`
+	Content   string `json:"content,omitempty"`
 	SessionID string `json:"sessionId,omitempty"`
 	Channel   string `json:"channel,omitempty"`
 	ChatID    string `json:"chatId,omitempty"`

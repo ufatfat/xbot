@@ -302,6 +302,7 @@ Called when a lifecycle event matches one of the plugin's registered hooks.
     "event": "PostToolUse",
     "toolName": "Shell",
     "toolInput": "{\"command\":\"ls -la\"}",
+    "content": "",
     "sessionId": "sess_abc123",
     "channel": "cli",
     "chatId": "chat_xyz"
@@ -314,6 +315,7 @@ Called when a lifecycle event matches one of the plugin's registered hooks.
 | `event` | string | The hook event name |
 | `toolName` | string | Name of the tool being executed (empty for non-tool events) |
 | `toolInput` | string | Raw JSON input to the tool (empty for non-tool events) |
+| `content` | string | Final assistant content for `AgentStop` (empty for other events) |
 | `sessionId` | string | Current session identifier |
 | `channel` | string | Message channel (e.g., `cli`, `feishu`, `web`) |
 | `chatId` | string | Chat/conversation ID |
